@@ -37,9 +37,9 @@ class Finger : public Adafruit_Fingerprint{
 public:
     Finger(): Adafruit_Fingerprint(&::mySerial){}
 
-    static void print(const char *str){
-        display.clearDisplay();
-        display.print(str);
+    static void print(const String & str, bool clear = true){
+        if (clear) display.clearDisplay();
+        display.println(str);
         display.display();
     }
     
@@ -47,18 +47,23 @@ public:
         switch (p) {
             case FINGERPRINT_OK:
                 Serial.println("Image taken");
+                Finger::print("Image taken");
                 return p;
             case FINGERPRINT_NOFINGER:
                 Serial.println("No finger detected");
+                Finger::print("No finger detected");
                 return p;
             case FINGERPRINT_PACKETRECIEVEERR:
                 Serial.println("Communication error");
+                Finger::print("Communication error");
                 return p;
             case FINGERPRINT_IMAGEFAIL:
                 Serial.println("Imaging error");
+                Finger::print("Imaging error");
                 return p;
             default:
                 Serial.println("Unknown error");
+                Finger::print("Unknown error");
                 return p;
         }
     }
@@ -66,22 +71,28 @@ public:
     uint8_t getImage2TzSwitch(uint8_t p){
         switch (p) {
             case FINGERPRINT_OK:
-                Serial.println("Image converted");
+                Serial.println("Converted");
+                Finger::print("Converted", false);
                 return p;
             case FINGERPRINT_IMAGEMESS:
                 Serial.println("Image too messy");
+                Finger::print("Image too messy", false);
                 return p;
             case FINGERPRINT_PACKETRECIEVEERR:
                 Serial.println("Communication error");
+                Finger::print("Communication error", false);
                 return p;
             case FINGERPRINT_FEATUREFAIL:
                 Serial.println("Could not find fingerprint features");
+                Finger::print("Could not find fingerprint features", false);
                 return p;
             case FINGERPRINT_INVALIDIMAGE:
                 Serial.println("Could not find fingerprint features");
+                Finger::print("Could not find fingerprint features", false);
                 return p;
             default:
                 Serial.println("Unknown error");
+                Finger::print("Unknown error", false);
                 return p;
         }
     }
@@ -98,15 +109,19 @@ public:
 
         p = fingerSearch();
         if (p == FINGERPRINT_OK) {
-            Serial.println("Found a print match!");
+            Serial.println("Match Found!");
+            Finger::print("Match Found!", false);
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
             Serial.println("Communication error");
+            Finger::print("Communication error", false);
             return p;
         } else if (p == FINGERPRINT_NOTFOUND) {
             Serial.println("Did not find a match");
+            Finger::print("Did not find a match", false);
             return p;
         } else {
             Serial.println("Unknown error");
+            Finger::print("Unknown error", false);
             return p;
         }
         return fingerID;
@@ -114,7 +129,8 @@ public:
 
     int getFingerprintEnroll() {
         int p = -1;
-        Serial.print("Waiting for valid finger to enroll as #"); Serial.println(id);
+        Serial.print("Place your Finger");
+        Finger::print("Place your Finger");
         while (p != FINGERPRINT_OK) {
             p = getImage();
             p = getImageSwitch(p);        
@@ -125,6 +141,7 @@ public:
         if (p != FINGERPRINT_OK) return p;
     
         Serial.println("Remove finger");
+        Finger::print("Remove finger");
         delay(2000);
         p = 0;
         while (p != FINGERPRINT_NOFINGER) {
@@ -133,6 +150,7 @@ public:
         Serial.print("ID "); Serial.println(id);
         p = -1;
         Serial.println("Place same finger again");
+        Finger::print("Place same finger again");
         while (p != FINGERPRINT_OK) {
             p = getImage();
             p = getImageSwitch(p);
@@ -189,9 +207,7 @@ void setup()
     display.begin();
     display.clearDisplay();
     display.setCursor(0, 0);
-    display.setTextSize(1);
-    display.print("yee");
-    display.display();
+    display.setTextSize(0.5);
   
     delay(100);
     finger.begin(57600);
@@ -200,9 +216,11 @@ void setup()
     while(true){
         if (finger.verifyPassword()) {
             Serial.println("Found");
+            Finger::print("Found");
             break;
         } else {
             Serial.println("Not Found");
+            Finger::print("Not Found");
         }
         delay(100);
     }
@@ -236,18 +254,23 @@ void loop(){
     finger.fingerID = 0;
     finger.getFingerprintID();
     if(finger.fingerID != 0 && finger.fingerID != 126 && finger.fingerID != 127 && finger.confidence > 80){
-        Serial.print("Found ID #"); Serial.print(finger.fingerID);
-        Serial.print(" with confidence of "); Serial.println(finger.confidence);
+        //Serial.print("Found ID #"); Serial.print(finger.fingerID);
+        //Serial.print(" with confidence of "); Serial.println(finger.confidence);
+
+        String text = String("Found ID #") + String(finger.fingerID);
+        
         if(!servo){
             // unlock
             Serial.println("unlocked");
-            Finger::print("unlocked");
+            Finger::print(text + "\nunlocked", false);
+            delay(3000);
             servo = true; 
         }
         else if(servo){
             // lock
             Serial.println("locked");
-            Finger::print("locked");
+            Finger::print(text + "\nlocked", false);
+            delay(3000);
             servo = false;
         }
     }
@@ -260,19 +283,22 @@ void loop(){
         if(IDCount == 126) IDCount+=2;
         else if(IDCount == 127) IDCount++;
         id = IDCount;
+        String text = String("Enrolling ID #") + id + "\nSetting up. Please Wait....";
         
-        Serial.print("Enrolling ID #");
-        Serial.println(id);
-        Serial.println("Setting up. Please Wait....");
+        Serial.println(text);
+        Finger::print(text);
+        
         delay(3000);
 
         while (finger.getFingerprintEnroll() != ENROLL_SUCCESS){
-            Serial.println("Setting up. Please Wait again....");
+            Serial.println(text);
+            Finger::print(text);
             delay(3000);
         }
         EEPROM.write(0, IDCount);
 
-        Serial.println("Please Remove Your Finger!");
+        Serial.println("Success!\nRemove Your Finger");
+        Finger::print("Success!\nRemove Your Finger");
         delay(3000);
     }
 #endif
