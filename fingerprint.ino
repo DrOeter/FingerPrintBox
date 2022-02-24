@@ -1,23 +1,7 @@
-/***************************************************
-  This is an example sketch for our optical Fingerprint sensor
-
-  Designed specifically to work with the Adafruit BMP085 Breakout
-  ----> http://www.adafruit.com/products/751
-
-  These displays use TTL Serial to communicate, 2 pins are required to
-  interface
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.
-  BSD license, all text above must be included in any redistribution
- ****************************************************/
-
-
 #include <Adafruit_Fingerprint.h>
 #include <EEPROM.h>
 #include <SPI.h>
+#include <Servo.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h> 
 #define ENROLL_SUCCESS 8192
@@ -30,8 +14,9 @@
 // Set up the serial port to use softwareserial..
 SoftwareSerial mySerial(2, 3);
 Adafruit_PCD8544 display = Adafruit_PCD8544(5, 4, 6);
+Servo servo;
 uint8_t id;
-bool servo = false;
+bool servoMove = false;
     
 class Finger : public Adafruit_Fingerprint{
 public:
@@ -165,14 +150,18 @@ public:
         p = createModel();
         if (p == FINGERPRINT_OK) {
             Serial.println("Prints matched!");
+            Finger::print("Prints matched!", false);
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
             Serial.println("Communication error");
+            Finger::print("Communication error", false);
             return p;
         } else if (p == FINGERPRINT_ENROLLMISMATCH) {
             Serial.println("Fingerprints did not match");
+            Finger::print("Fingerprints did not match", false);
             return p;
         } else {
             Serial.println("Unknown error");
+            Finger::print("Unknown error", false);
             return p;
         }
     
@@ -180,17 +169,22 @@ public:
         p = storeModel(id);
         if (p == FINGERPRINT_OK) {
             Serial.println("Stored!");
+            Finger::print("Stored!");
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
             Serial.println("Communication error");
+            Finger::print("Communication error");
             return p;
         } else if (p == FINGERPRINT_BADLOCATION) {
             Serial.println("Could not store in that location");
+            Finger::print("Could not store in that location");
             return p;
         } else if (p == FINGERPRINT_FLASHERR) {
             Serial.println("Error writing to flash");
+            Finger::print("Error writing to flash");
             return p;
         } else {
             Serial.println("Unknown error");
+            Finger::print("Unknown error");
             return p;
         }
         return ENROLL_SUCCESS;
@@ -208,6 +202,8 @@ void setup()
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextSize(0.5);
+
+    servo.attach(9);
   
     delay(100);
     finger.begin(57600);
@@ -254,30 +250,23 @@ void loop(){
     finger.fingerID = 0;
     finger.getFingerprintID();
     if(finger.fingerID != 0 && finger.fingerID != 126 && finger.fingerID != 127 && finger.confidence > 80){
-        //Serial.print("Found ID #"); Serial.print(finger.fingerID);
-        //Serial.print(" with confidence of "); Serial.println(finger.confidence);
-
         String text = String("Found ID #") + String(finger.fingerID);
-        
-        if(!servo){
+        if(!servoMove){
             // unlock
             Serial.println("unlocked");
             Finger::print(text + "\nunlocked", false);
-            delay(3000);
-            servo = true; 
+            servo.write(0);
+            servoMove = true; 
         }
-        else if(servo){
+        else if(servoMove){
             // lock
             Serial.println("locked");
             Finger::print(text + "\nlocked", false);
-            delay(3000);
-            servo = false;
+            servo.write(90);
+            servoMove = false;
         }
     }
     else if((finger.fingerID == 126 || finger.fingerID == 127 ) && finger.confidence > 80){
-        //Serial.println("Ready to enroll a fingerprint!");
-        //Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
-
         byte IDCount = EEPROM.read(0);
         IDCount++;
         if(IDCount == 126) IDCount+=2;
@@ -299,11 +288,14 @@ void loop(){
 
         Serial.println("Success!\nRemove Your Finger");
         Finger::print("Success!\nRemove Your Finger");
-        delay(3000);
     }
+    int p = 0;
+    while (p != FINGERPRINT_NOFINGER) {
+        p = finger.getImage();
+    }
+    delay(100);
 #endif
 #ifdef RESET_EEPROM
     EEPROM.write(0, 1);
 #endif 
-    delay(100);
 }
