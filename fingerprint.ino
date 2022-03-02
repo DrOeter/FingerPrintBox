@@ -18,17 +18,17 @@ Servo servo;
 uint8_t id;
 bool servoMove = false;
     
-class Finger : public Adafruit_Fingerprint{
+class Finger : public Adafruit_Fingerprint{                                     // Eigene Fingerprint-Klasse abgeleitet von Adafruit_Fingerprint
 public:
-    Finger(): Adafruit_Fingerprint(&::mySerial){}
+    Finger(): Adafruit_Fingerprint(&::mySerial){}                               // Konstruktor mit Serial initialisieren
 
-    static void print(const String & str, bool clear = true){
+    static void print(const String & str, bool clear = true){                   // Macht Bildschirmausgaben
         if (clear) display.clearDisplay();
         display.println(str);
         display.display();
     }
     
-    uint8_t getImageSwitch(uint8_t p){
+    uint8_t getImageSwitch(uint8_t p){                                          // Gibt Signale aus dem Sensor als Text aus
         switch (p) {
             case FINGERPRINT_OK:
                 Serial.println("Image taken");
@@ -53,7 +53,7 @@ public:
         }
     }
 
-    uint8_t getImage2TzSwitch(uint8_t p){
+    uint8_t getImage2TzSwitch(uint8_t p){                                       // Gibt Signale aus dem Sensor als Text aus
         switch (p) {
             case FINGERPRINT_OK:
                 Serial.println("Converted");
@@ -83,17 +83,17 @@ public:
     }
 
 
-    uint8_t getFingerprintID() {
+    uint8_t getFingerprintID() {                                                // Funktion scannt aufliegenden Finger und guckt ob dieses Bild im Fingerprintsensorspeicher vorhanden ist
         uint8_t p = getImage();
         p = getImageSwitch(p);
         if (p != FINGERPRINT_OK) return p;
         
         p = image2Tz();
         p = getImage2TzSwitch(p);
-        if (p != FINGERPRINT_OK) return p;
+        if (p != FINGERPRINT_OK) return p;                                      // Dann guckt er ob dieser Scan ein akzeptables Bild geliefert hat
 
         p = fingerSearch();
-        if (p == FINGERPRINT_OK) {
+        if (p == FINGERPRINT_OK) {                                              // Gibt Signale aus dem Sensor als Text aus
             Serial.println("Match Found!");
             Finger::print("Match Found!", false);
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
@@ -112,43 +112,43 @@ public:
         return fingerID;
     }
 
-    int getFingerprintEnroll() {
+    int getFingerprintEnroll() {                                                // Funktion um einen neuen Fingerabdruck zu speichern
         int p = -1;
-        Serial.print("Place your Finger");
+        Serial.print("Place your Finger");                                      // Er erwartet, dass man am anfang einmal den Finger auflegt
         Finger::print("Place your Finger");
-        while (p != FINGERPRINT_OK) {
+        while (p != FINGERPRINT_OK) {                                           // Dann wartet er bis der Finger wieder weggenommen wurde
             p = getImage();
             p = getImageSwitch(p);        
         }
         
         p = image2Tz(1);
         p = getImage2TzSwitch(p);
-        if (p != FINGERPRINT_OK) return p;
+        if (p != FINGERPRINT_OK) return p;                                      // Dann guckt er ob dieser Scan ein akzeptables Bild geliefert hat
     
         Serial.println("Remove finger");
-        Finger::print("Remove finger");
+        Finger::print("Remove finger");                                         // Wenn ja fordert er den Finger wegzunehmen 
         delay(2000);
         p = 0;
-        while (p != FINGERPRINT_NOFINGER) {
+        while (p != FINGERPRINT_NOFINGER) {                                     // Warten bis der Finger weggenommen ist
             p = getImage();
         }
         Serial.print("ID "); Serial.println(id);
         p = -1;
         Serial.println("Place same finger again");
-        Finger::print("Place same finger again");
-        while (p != FINGERPRINT_OK) {
+        Finger::print("Place same finger again");                               // Dann erwartet er den selben Finger nochmal
+        while (p != FINGERPRINT_OK) {                                               
             p = getImage();
             p = getImageSwitch(p);
         }
     
         p = image2Tz(2);
         p = getImage2TzSwitch(p);
-        if (p != FINGERPRINT_OK) return p;
+        if (p != FINGERPRINT_OK) return p;                                      // Dann guckt er ob dieser Scan ein akzeptables Bild geliefert hat
     
         Serial.print("Creating model for #");  Serial.println(id);
     
-        p = createModel();
-        if (p == FINGERPRINT_OK) {
+        p = createModel();                                                      // Dann formt er das Scanergebnis in ein speicherbares Modell um
+        if (p == FINGERPRINT_OK) {                                              // Gibt Signale aus dem Sensor als Text aus
             Serial.println("Prints matched!");
             Finger::print("Prints matched!", false);
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
@@ -166,8 +166,8 @@ public:
         }
     
         Serial.print("ID "); Serial.println(id);
-        p = storeModel(id);
-        if (p == FINGERPRINT_OK) {
+        p = storeModel(id);                                                     // Speichert Modell in Fingerprintspeicher unter im loop gesetzter ID
+        if (p == FINGERPRINT_OK) {                                              // Gibt Signale aus dem Sensor als Text aus
             Serial.println("Stored!");
             Finger::print("Stored!");
         } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
@@ -195,21 +195,22 @@ Finger finger;
 
 void setup()
 {
-    Serial.begin(9600);
-    while (!Serial);  
+    Serial.begin(9600);                                                         // Startet Serielle ausgabe
+    while (!Serial);                                                            
     
-    display.begin();
-    display.clearDisplay();
+    display.begin();                                                            // Startet Bildschirmausgabe
+    display.clearDisplay();                                                     // Setzt Bildschirmeinstellungen
     display.setCursor(0, 0);
     display.setTextSize(0.5);
 
-    servo.attach(9);
+    servo.attach(9);                                                            // Setzt Servo-Signal-Pin auf PIN 9
+    servo.write(70);                                                            // Verschließt standardmäßig die Box
   
     delay(100);
-    finger.begin(57600);
+    finger.begin(57600);                                                        // Startet Sensorkommunikation
     delay(5);
 
-    while(true){
+    while(true){                                                                // Sucht den Sensor
         if (finger.verifyPassword()) {
             Serial.println("Found");
             Finger::print("Found");
@@ -220,58 +221,42 @@ void setup()
         }
         delay(100);
     }
-    
-    //Serial.println(F("Reading sensor parameters"));
     finger.getParameters();
-    /*Serial.print(F("Status: 0x")); Serial.println(finger.status_reg, HEX);
-    Serial.print(F("Sys ID: 0x")); Serial.println(finger.system_id, HEX);
-    Serial.print(F("Capacity: ")); Serial.println(finger.capacity);
-    Serial.print(F("Security level: ")); Serial.println(finger.security_level);
-    Serial.print(F("Device address: ")); Serial.println(finger.device_addr, HEX);
-    Serial.print(F("Packet len: ")); Serial.println(finger.packet_len);
-    Serial.print(F("Baud rate: ")); Serial.println(finger.baud_rate);
-*/
     finger.getTemplateCount();
-/*
-    if (finger.templateCount == 0) {
-        Serial.print("Sensor doesn't contain any fingerprint data. Please run the 'enroll' example.");
-    }
-    else {
-        Serial.println("Waiting for valid finger...");
-        Serial.print("Sensor contains "); Serial.print(finger.templateCount); Serial.println(" templates");
-    }*/
 }
 
 #define NORMAL_USAGE
-//#define RESET_EEPROM
+//#define RESET_EEPROM                                                          // Hiermit kann man den Zähler der Fingerabdrücke zurücksetzen
     
 void loop(){
 #ifdef NORMAL_USAGE
-    finger.fingerID = 0;
-    finger.getFingerprintID();
-    if(finger.fingerID != 0 && finger.fingerID != 126 && finger.fingerID != 127 && finger.confidence > 80){
-        String text = String("Found ID #") + String(finger.fingerID);
-        if(!servoMove){
+    finger.fingerID = 0;                                                        // Reseted fingerID
+    finger.getFingerprintID();                                                  // Wartet auf Fingerabdruck
+                                                                                // Wenn fingerID != authorisierungsFingerID wird die Box geöffnet/geschlossen
+    if(finger.fingerID != 0 && finger.fingerID != 126 && finger.fingerID != 127 && finger.confidence > 80){     
+        String text = String("Found ID #") + String(finger.fingerID);           
+        if(!servoMove){                                                         // Schließt Box auf
             // unlock
             Serial.println("unlocked");
             Finger::print(text + "\nunlocked", false);
-            servo.write(0);
+            servo.write(140);                                                   // Setzt Servo auf 140 Grad
             servoMove = true; 
         }
-        else if(servoMove){
+        else if(servoMove){                                                     // Schließt Box zu
             // lock
             Serial.println("locked");
             Finger::print(text + "\nlocked", false);
-            servo.write(90);
+            servo.write(70);                                                    // Setzt Servo auf 70 Grad
             servoMove = false;
         }
     }
+                                                                                // Wenn fingerID != authorisierungsFingerID wird ein neuer Fingerabdruck abgespeichert
     else if((finger.fingerID == 126 || finger.fingerID == 127 ) && finger.confidence > 80){
-        byte IDCount = EEPROM.read(0);
-        IDCount++;
-        if(IDCount == 126) IDCount+=2;
+        byte IDCount = EEPROM.read(0);                                          // Liest Zählerwert aus EEPROM-Speicher
+        IDCount++;                                              
+        if(IDCount == 126) IDCount+=2;                                          // Authorisierungsfingerabdrücke dürfen nicht überschrieben werden
         else if(IDCount == 127) IDCount++;
-        id = IDCount;
+        id = IDCount;                                                           // gibt ID an globale variable
         String text = String("Enrolling ID #") + id + "\nSetting up. Please Wait....";
         
         Serial.println(text);
@@ -279,18 +264,18 @@ void loop(){
         
         delay(3000);
 
-        while (finger.getFingerprintEnroll() != ENROLL_SUCCESS){
+        while (finger.getFingerprintEnroll() != ENROLL_SUCCESS){                // Wiederholt Einscanprozess solange bis er erolgreich war
             Serial.println(text);
             Finger::print(text);
             delay(3000);
         }
-        EEPROM.write(0, IDCount);
+        EEPROM.write(0, IDCount);                                               // Schreibt erhöhten IDZähler
 
         Serial.println("Success!\nRemove Your Finger");
         Finger::print("Success!\nRemove Your Finger");
     }
     int p = 0;
-    while (p != FINGERPRINT_NOFINGER) {
+    while (p != FINGERPRINT_NOFINGER) {                                         // Wartet bis kein Finger aufliegt
         p = finger.getImage();
     }
     delay(100);
